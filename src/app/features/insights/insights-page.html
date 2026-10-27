@@ -1,0 +1,75 @@
+<div class="page">
+  <header>
+    <div>
+      <h1>Insights</h1>
+      <p>What employees ask, what the policies answer, and where the knowledge base has gaps. Last 30 days.</p>
+    </div>
+    <button class="btn" (click)="analytics.reload()" [disabled]="analytics.isLoading()">Refresh</button>
+  </header>
+
+  @if (analytics.value(); as a) {
+    <section class="kpis" aria-label="Key metrics">
+      <div class="card kpi">
+        <span>Questions asked</span>
+        <strong>{{ a.totalQuestions | number }}</strong>
+      </div>
+      <div class="card kpi">
+        <span>Answered from policies</span>
+        <strong>{{ a.answerRate | percent: '1.0-0' }}</strong>
+      </div>
+      <div class="card kpi">
+        <span>Rated helpful</span>
+        <strong>{{ a.helpfulRate | percent: '1.0-0' }}</strong>
+      </div>
+      <div class="card kpi">
+        <span>Median time to answer</span>
+        <strong>{{ a.medianLatencyMs / 1000 | number: '1.1-1' }} s</strong>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <h2>Questions per day</h2>
+      <app-daily-chart [data]="a.daily" />
+    </section>
+
+    <div class="columns">
+      <section class="card panel">
+        <h2>Knowledge gaps</h2>
+        <p class="hint">Questions the policies couldn't answer. Each one is a document to write or update.</p>
+        <ol class="gaps">
+          @for (g of a.unanswered; track g.question) {
+            <li>
+              <span class="q">{{ g.question }}</span>
+              <span class="count" [title]="g.count + ' times'">{{ g.count }}×</span>
+              <button class="btn ghost" (click)="askAgain(g.question)">Ask again</button>
+            </li>
+          }
+        </ol>
+        <a class="btn" routerLink="/documents"><app-icon name="upload" [size]="16" /> Add a document</a>
+      </section>
+
+      <section class="card panel">
+        <h2>Most cited documents</h2>
+        <p class="hint">How often each document backed an answer.</p>
+        <ul class="cited">
+          @for (d of a.topDocuments; track d.title) {
+            <li>
+              <span class="title">{{ d.title }}</span>
+              <span class="bar" aria-hidden="true"><span [style.width.%]="(d.citations / maxCitations()) * 100"></span></span>
+              <span class="value">{{ d.citations | number }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+  } @else if (analytics.error()) {
+    <p class="card panel" role="alert">Couldn't load insights. <button class="btn" (click)="analytics.reload()">Try again</button></p>
+  } @else {
+    <div class="kpis">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="skeleton" style="height: 86px"></div>
+      }
+    </div>
+    <div class="skeleton" style="height: 300px"></div>
+  }
+</div>

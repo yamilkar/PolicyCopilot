@@ -1,0 +1,57 @@
+<div class="chat" [class.with-source]="source()">
+  <div class="conversation">
+    <div class="toolbar">
+      <div class="scope" role="group" aria-label="Search in">
+        <span class="label">Search in</span>
+        <button class="chip" [attr.aria-pressed]="store.scope().length === 0" (click)="store.scope.set([])">All policies</button>
+        @for (c of collections.value(); track c.id) {
+          <button class="chip" [attr.aria-pressed]="store.scope().includes(c.id)" (click)="toggleScope(c.id)" [title]="c.description">{{ c.name }}</button>
+        }
+      </div>
+      <label class="dev-toggle" title="Show the retrieval pipeline behind every answer">
+        <input type="checkbox" [checked]="devMode()" (change)="devMode.set(!devMode())" />
+        <app-icon name="layers" [size]="16" /> Retrieval details
+      </label>
+    </div>
+
+    <div class="scroller" #scroller (scroll)="onScroll(scroller)">
+      @if (store.messages().length === 0) {
+        <section class="empty">
+          <div class="hero-icon"><app-icon name="shield" [size]="28" /></div>
+          <h1>Ask anything about Brightwell's policies</h1>
+          <p>Answers come only from the official policy documents, with a citation for every claim. If the policies don't cover it, Policy Copilot says so instead of guessing.</p>
+          <div class="suggestions">
+            @for (q of suggestions; track q) {
+              <button class="suggestion card" (click)="ask(q)">
+                <app-icon name="sparkle" [size]="16" />
+                <span>{{ q }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      } @else {
+        <div class="messages" aria-live="polite">
+          @for (m of store.messages(); track m.id) {
+            <app-message
+              [message]="m"
+              [devMode]="devMode()"
+              [selectedChunkId]="source()?.chunkId ?? null"
+              (openSource)="source.set($event)"
+              (followUp)="ask($event)"
+              (rate)="rate(m.id, $event)"
+            />
+          }
+        </div>
+      }
+    </div>
+
+    <div class="composer-wrap">
+      <app-composer [busy]="store.busy()" (ask)="ask($event)" (stop)="store.stop()" />
+      <p class="disclaimer">Policy Copilot can make mistakes. Check the cited source before acting on an answer.</p>
+    </div>
+  </div>
+
+  @if (source(); as s) {
+    <app-source-viewer class="source-panel" [documentId]="s.documentId" [chunkId]="s.chunkId" (close)="closeSource()" />
+  }
+</div>

@@ -1,0 +1,149 @@
+@let m = message();
+@if (m.role === 'user') {
+  <div class="bubble">{{ m.text }}</div>
+} @else {
+  <div class="avatar" aria-hidden="true"><app-icon name="shield" [size]="16" /></div>
+  <article class="answer" [attr.aria-busy]="m.streaming">
+    @if (m.streaming && !m.text) {
+      <p class="thinking">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        {{ m.trace ? 'Reading ' + m.trace.retrieved.length + ' passages…' : 'Searching your policies…' }}
+      </p>
+    }
+
+    @if (!m.streaming && m.confidence) {
+      @switch (m.confidence) {
+        @case ('high') {
+          <span class="badge success"><app-icon name="check" [size]="12" /> Grounded in {{ m.citations?.length }} sources</span>
+        }
+        @case ('medium') {
+          <span class="badge warning"><app-icon name="alert" [size]="12" /> Partial match, check the sources</span>
+        }
+        @case ('none') {
+          <span class="badge danger"><app-icon name="alert" [size]="12" /> No reliable answer found</span>
+        }
+      }
+    }
+
+    <div class="body">
+      @for (block of blocks(); track $index) {
+        @if (block.kind === 'paragraph') {
+          <p>
+            @for (inline of block.inlines; track $index) {
+              @switch (inline.kind) {
+                @case ('text') {<span>{{ inline.text }}</span>}
+                @case ('bold') {<strong>{{ inline.text }}</strong>}
+                @case ('cite') {
+                  <span class="cite-wrap">
+                    <button
+                      class="cite"
+                      [class.selected]="citation(inline.index)?.chunkId === selectedChunkId()"
+                      (click)="onCite(inline.index)"
+                      [disabled]="!citation(inline.index)"
+                      [attr.aria-label]="'Source ' + inline.index + (citation(inline.index) ? ': ' + citation(inline.index)!.documentTitle : '')"
+                    >{{ inline.index }}</button>
+                    @if (citation(inline.index); as c) {
+                      <span class="pop" role="tooltip">
+                        <strong>{{ c.documentTitle }}</strong>
+                        <small>{{ c.heading }}</small>
+                        {{ c.snippet }}
+                      </span>
+                    }
+                  </span>
+                }
+              }
+            }
+          </p>
+        } @else {
+          <ul>
+            @for (item of block.items; track $index) {
+              <li>
+                @for (inline of item; track $index) {
+                  @switch (inline.kind) {
+                    @case ('text') {<span>{{ inline.text }}</span>}
+                    @case ('bold') {<strong>{{ inline.text }}</strong>}
+                    @case ('cite') {
+                      <button
+                        class="cite"
+                        [class.selected]="citation(inline.index)?.chunkId === selectedChunkId()"
+                        (click)="onCite(inline.index)"
+                        [disabled]="!citation(inline.index)"
+                        [attr.aria-label]="'Source ' + inline.index"
+                      >{{ inline.index }}</button>
+                    }
+                  }
+                }
+              </li>
+            }
+          </ul>
+        }
+      }
+      @if (m.streaming && m.text) {
+        <span class="caret" aria-hidden="true"></span>
+      }
+    </div>
+
+    @if (m.error) {
+      <p class="error" role="alert">{{ m.error }}</p>
+    }
+
+    @if (m.citations?.length && !m.streaming) {
+      <section class="sources" aria-label="Sources">
+        <h3>{{ m.confidence === 'none' ? 'Closest passages' : 'Sources' }}</h3>
+        <ol>
+          @for (c of m.citations; track c.chunkId) {
+            <li>
+              <button class="source" [class.selected]="c.chunkId === selectedChunkId()" (click)="openSource.emit(c)">
+                <span class="n">{{ c.index }}</span>
+                <span class="what">
+                  <strong>{{ c.documentTitle }}</strong>
+                  <small>{{ c.heading }}</small>
+                </span>
+                <span class="score" [title]="'Similarity ' + (c.score | number: '1.2-2')">
+                  <span class="bar"><span [style.width.%]="c.score * 100"></span></span>
+                </span>
+              </button>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+
+    @if (!m.streaming && m.text) {
+      <div class="actions">
+        <button class="btn ghost icon" (click)="copy()" [attr.aria-label]="copied() ? 'Copied' : 'Copy answer with sources'" [title]="copied() ? 'Copied' : 'Copy'">
+          <app-icon [name]="copied() ? 'check' : 'copy'" [size]="16" />
+        </button>
+        <button class="btn ghost icon" [attr.aria-pressed]="m.feedback === 'up'" (click)="thumbsUp()" aria-label="Helpful" title="Helpful">
+          <app-icon name="thumbUp" [size]="16" />
+        </button>
+        <button class="btn ghost icon" [attr.aria-pressed]="m.feedback === 'down'" (click)="thumbsDown()" aria-label="Not helpful" title="Not helpful">
+          <app-icon name="thumbDown" [size]="16" />
+        </button>
+        @if (m.feedback && !askingReason()) {
+          <span class="thanks" role="status">Thanks, this helps improve the policies.</span>
+        }
+      </div>
+      @if (askingReason()) {
+        <div class="reasons" role="group" aria-label="What was wrong?">
+          <span>What was wrong?</span>
+          @for (r of reasons; track r.id) {
+            <button class="chip" (click)="thumbsDown(r.id)">{{ r.label }}</button>
+          }
+        </div>
+      }
+    }
+
+    @if (m.followUps?.length && !m.streaming) {
+      <div class="follow-ups">
+        @for (q of m.followUps; track q) {
+          <button class="chip" (click)="followUp.emit(q)"><app-icon name="arrowRight" [size]="14" /> {{ q }}</button>
+        }
+      </div>
+    }
+
+    @if (devMode() && m.trace) {
+      <app-retrieval-inspector [trace]="m.trace" />
+    }
+  </article>
+}

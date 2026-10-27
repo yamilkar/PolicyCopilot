@@ -1,0 +1,68 @@
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="layout" [class.menu-open]="menuOpen()">
+  <aside class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span class="logo"><app-icon name="shield" [size]="18" /></span>
+      <div>
+        <strong>Policy Copilot</strong>
+        <small>Brightwell Labs</small>
+      </div>
+      <button class="btn ghost icon close-menu" (click)="menuOpen.set(false)" aria-label="Close menu">
+        <app-icon name="close" />
+      </button>
+    </div>
+
+    <a class="btn primary new" routerLink="/ask" (click)="store.open(null)">
+      <app-icon name="plus" [size]="16" /> New question
+    </a>
+
+    <nav>
+      <a routerLink="/ask" routerLinkActive="active"><app-icon name="chat" /> Ask</a>
+      <a routerLink="/documents" routerLinkActive="active"><app-icon name="file" /> Documents</a>
+      <a routerLink="/insights" routerLinkActive="active"><app-icon name="chart" /> Insights</a>
+    </nav>
+
+    <section class="history" aria-labelledby="history-title">
+      <h2 id="history-title">Recent</h2>
+      @for (c of store.conversations(); track c.id) {
+        <div class="history-item" [class.active]="c.id === store.activeId()">
+          <a [routerLink]="['/ask', c.id]" [attr.aria-current]="c.id === store.activeId() ? 'page' : null">{{ c.title }}</a>
+          <button class="btn ghost icon" (click)="store.remove(c.id)" [attr.aria-label]="'Delete conversation: ' + c.title">
+            <app-icon name="trash" [size]="14" />
+          </button>
+        </div>
+      } @empty {
+        <p class="muted">Your questions will show up here.</p>
+      }
+    </section>
+
+    <footer>
+      <button class="btn ghost palette-hint" (click)="openPalette()">
+        <app-icon name="search" [size]="16" /> Search <kbd>{{ shortcut }}</kbd>
+      </button>
+      <button class="btn ghost icon" (click)="theme.toggle()" [attr.aria-label]="theme.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
+      </button>
+    </footer>
+  </aside>
+
+  <div class="scrim" (click)="menuOpen.set(false)" aria-hidden="true"></div>
+
+  <div class="main-column">
+    <header class="topbar">
+      <button class="btn ghost icon" (click)="menuOpen.set(true)" aria-label="Open menu"><app-icon name="menu" /></button>
+      <strong>Policy Copilot</strong>
+      <button class="btn ghost icon" (click)="openPalette()" aria-label="Search"><app-icon name="search" /></button>
+    </header>
+    <div class="demo-banner" role="note">
+      <app-icon name="sparkle" [size]="14" />
+      Demo mode: answers come from synthetic Brightwell Labs policies running in your browser.
+    </div>
+    <main id="main" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<app-command-palette />
